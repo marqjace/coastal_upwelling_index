@@ -275,4 +275,4 @@ sec2.set_xlabel(r'Yearday 2024')
 
 ax['lower'].text((new_time.max() + timedelta(days=5)), cumulative_sum.min(), cumsum_min + ' ' + r'N/m$^2$Days')
 
-plt.savefig('C:/Users/marqjace/cui/nwpo3h2024/cui_2024.png')
+plt.savefig(r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/figures/cui_2024.png')
