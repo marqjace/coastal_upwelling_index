@@ -194,8 +194,12 @@ if upwelling_periods:
         print(f"Upwelling season {i}: From {start.date()} to {end.date()}")
 else:
     print("No upwelling season detected.")
+    # Set default values for start and end if no upwelling periods are detected
+    start, end = ds.index[0], ds.index[-1]
 
-
+# Define start and end for the mask
+if upwelling_periods:
+    start, end = upwelling_periods[0]  # Example: using the first upwelling period
 
 mask = np.logical_and(ds.index >= start, ds.index <= end)
 
