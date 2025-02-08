@@ -2,7 +2,7 @@
 
 # Created on 2024-10-07 by Jace Marquardt - Oregon State University
 # Wind Stress Functions by Filipe Fernandes (https://github.com/ocefpaf)
-# Last Updated 2024-12-18 by Jace Marquardt
+# Last Updated 2025-02-08 by Jace Marquardt
 
 # Imports 
 import numpy as np # type: ignore
@@ -16,7 +16,7 @@ from metpy.units import units # type: ignore
 
 
 # Open first dataset up to the 45-day realtime
-ds1 = pd.read_csv('C:/Users/marqjace/cui/nwpo3h2024/nwpo3h2024.txt', sep='\s+', header=1, parse_dates=[['#yr', 'mo', 'dy', 'hr', 'mn']])
+ds1 = pd.read_csv(r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2024/nwpo3h2024.txt', sep='\s+', header=1, parse_dates=[['#yr', 'mo', 'dy', 'hr', 'mn']])
 
 # Create "time" column and convert it to Datetime
 ds1['time'] = pd.to_datetime(ds1['#yr_mo_dy_hr_mn'], format='%Y %m %d %H %M')
@@ -25,7 +25,7 @@ ds1['time'] = pd.to_datetime(ds1['#yr_mo_dy_hr_mn'], format='%Y %m %d %H %M')
 ds1.replace('MM', np.nan, inplace=True)
 
 # Open second dataset with 45-day realtime values
-ds2 = pd.read_csv('C:/Users/marqjace/cui/nwpo3h2024/realtime.txt', sep='\s+', header=1, parse_dates=[['#yr', 'mo', 'dy', 'hr', 'mn']])
+ds2 = pd.read_csv(r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2024/realtime.txt', sep='\s+', header=1, parse_dates=[['#yr', 'mo', 'dy', 'hr', 'mn']])
 
 # Create "time" column and convert it to Datetime
 ds2['time'] = pd.to_datetime(ds2['#yr_mo_dy_hr_mn'], format='%Y %m %d %H %M')
@@ -48,7 +48,7 @@ ds = ds.drop(['#yr_mo_dy_hr_mn','sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft',
 
 
 # Specify path for export. Creates new file with combined dataset.
-path = 'C:/Users/marqjace/cui/nwpo3h2024/2024_tmp.txt'
+path = r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2024/2024_tmp.txt'
 
 # Export dataset to text file (keep header row and index column)
 with open(path, 'w') as f:
@@ -146,7 +146,7 @@ ds['positive_stress'] = ds['stress'].apply(lambda x: x if x > 0 else 0)
 ds['negative_stress'] = ds['stress'].apply(lambda x: x if x < 0 else 0)
 
 # Specify path for export. Creates new file with combined dataset.
-path = 'C:/Users/marqjace/cui/nwpo3h2024/2024_with_stress.txt'
+path = r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2024/2024_with_stress.txt'
 
 # Export dataset to text file (keep header row and index column)
 with open(path, 'w') as f:
