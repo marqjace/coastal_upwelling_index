@@ -16,7 +16,7 @@ from metpy.units import units # type: ignore
 
 
 # Open first dataset up to the 45-day realtime (found at https://www.ndbc.noaa.gov/station_history.php?station=nwpo3)
-ds1 = pd.read_csv(r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2025/nwpo312025.txt', sep='\s+', header=1, parse_dates=[['#yr', 'mo', 'dy', 'hr', 'mn']])
+ds1 = pd.read_csv(r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2025/nwpo3_2025.txt', sep='\s+', header=1, parse_dates=[['#yr', 'mo', 'dy', 'hr', 'mn']])
 
 # Create "time" column and convert it to Datetime
 ds1['time'] = pd.to_datetime(ds1['#yr_mo_dy_hr_mn'], format='%Y %m %d %H %M')
