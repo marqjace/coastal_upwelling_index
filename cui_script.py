@@ -15,8 +15,8 @@ from metpy.calc import wind_components # type: ignore
 from metpy.units import units # type: ignore
 
 
-# Open first dataset up to the 45-day realtime
-ds1 = pd.read_csv(r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2024/nwpo3h2024.txt', sep='\s+', header=1, parse_dates=[['#yr', 'mo', 'dy', 'hr', 'mn']])
+# Open first dataset up to the 45-day realtime (found at https://www.ndbc.noaa.gov/station_history.php?station=nwpo3)
+ds1 = pd.read_csv(r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2025/nwpo312025.txt', sep='\s+', header=1, parse_dates=[['#yr', 'mo', 'dy', 'hr', 'mn']])
 
 # Create "time" column and convert it to Datetime
 ds1['time'] = pd.to_datetime(ds1['#yr_mo_dy_hr_mn'], format='%Y %m %d %H %M')
@@ -24,8 +24,8 @@ ds1['time'] = pd.to_datetime(ds1['#yr_mo_dy_hr_mn'], format='%Y %m %d %H %M')
 # Replace "MM" values with NaNs
 ds1.replace('MM', np.nan, inplace=True)
 
-# Open second dataset with 45-day realtime values
-ds2 = pd.read_csv(r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2024/realtime.txt', sep='\s+', header=1, parse_dates=[['#yr', 'mo', 'dy', 'hr', 'mn']])
+# Open second dataset with 45-day realtime values (found at https://www.ndbc.noaa.gov/station_realtime.php?station=nwpo3)
+ds2 = pd.read_csv(r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2025/realtime.txt', sep='\s+', header=1, parse_dates=[['#yr', 'mo', 'dy', 'hr', 'mn']])
 
 # Create "time" column and convert it to Datetime
 ds2['time'] = pd.to_datetime(ds2['#yr_mo_dy_hr_mn'], format='%Y %m %d %H %M')
@@ -48,7 +48,7 @@ ds = ds.drop(['#yr_mo_dy_hr_mn','sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft',
 
 
 # Specify path for export. Creates new file with combined dataset.
-path = r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2024/2024_tmp.txt'
+path = r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2025/2025_tmp.txt'
 
 # Export dataset to text file (keep header row and index column)
 with open(path, 'w') as f:
@@ -146,7 +146,7 @@ ds['positive_stress'] = ds['stress'].apply(lambda x: x if x > 0 else 0)
 ds['negative_stress'] = ds['stress'].apply(lambda x: x if x < 0 else 0)
 
 # Specify path for export. Creates new file with combined dataset.
-path = r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2024/2024_with_stress.txt'
+path = r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/2025/2025_with_stress.txt'
 
 # Export dataset to text file (keep header row and index column)
 with open(path, 'w') as f:
@@ -232,16 +232,16 @@ ax['upper'].fill_between(ds.index, stress, where=(stress >= 0), interpolate=True
 ax['upper'].fill_between(ds.index, stress, where=(stress < 0), interpolate=True, color='b', alpha=1)
 
 ax['upper'].set_xticklabels('')
-ax['upper'].set_xticks((datetime(2024,1,1), datetime(2024,2,1), datetime(2024,3,1), datetime(2024,4,1), datetime(2024,5,1), datetime(2024,6,1), datetime(2024,7,1), 
-            datetime(2024,8,1), datetime(2024,9,1), datetime(2024,10,1), datetime(2024,11,1), datetime(2024,12,1)))
+ax['upper'].set_xticks((datetime(2025,1,1), datetime(2025,2,1), datetime(2025,3,1), datetime(2025,4,1), datetime(2025,5,1), datetime(2025,6,1), datetime(2025,7,1), 
+            datetime(2025,8,1), datetime(2025,9,1), datetime(2025,10,1), datetime(2025,11,1), datetime(2025,12,1)))
 ax['upper'].set_xticklabels(('J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'))
-ax['upper'].set_xlim(datetime(2024,1,1), datetime(2025,1,1))
+ax['upper'].set_xlim(datetime(2025,1,1), datetime(2026,1,1))
 ax['upper'].xaxis.set_label_position('top') 
 ax['upper'].xaxis.tick_top()
 ax['upper'].tick_params(width=1, top=True, right=True, bottom=False, direction='in', which='both')
 
 sec = ax['upper'].secondary_xaxis(location=0)
-sec.set_xticks([datetime(2024,1,1), datetime(2024,3,1), datetime(2024,4,30), datetime(2024,6,29), datetime(2024,8,28), datetime(2024,10,27), datetime(2024,12,26)], labels=['0', '60', '120', '180', '240', '300', '360'])
+sec.set_xticks([datetime(2025,1,1), datetime(2025,3,1), datetime(2025,4,30), datetime(2025,6,29), datetime(2025,8,28), datetime(2025,10,27), datetime(2025,12,26)], labels=['0', '60', '120', '180', '240', '300', '360'])
 sec.tick_params(width=1, top=False, right=False, bottom=True, direction='in', which='both')
 
 ax['upper'].set_yticks((-0.3, 0.0, 0.3, 0.6, 0.9))
@@ -249,30 +249,30 @@ ax['upper'].set_yticklabels((-0.3, 0.0, 0.3, 0.6, 0.9))
 ax['upper'].set_ylim(-0.3, 0.9)
 
 ax['upper'].set_ylabel(r'Wind Stress (N/m$^2$)')
-ax['upper'].set_title('2024')
+ax['upper'].set_title('2025')
 
 ax['lower'].plot(new_time, cumulative_sum, c='b', alpha=0.75)
 ax['lower'].set_xticklabels('')
-ax['lower'].set_xticks((datetime(2024,1,1), datetime(2024,2,1), datetime(2024,3,1), datetime(2024,4,1), datetime(2024,5,1), datetime(2024,6,1), datetime(2024,7,1), 
-            datetime(2024,8,1), datetime(2024,9,1), datetime(2024,10,1), datetime(2024,11,1), datetime(2024,12,1)))
+ax['lower'].set_xticks((datetime(2025,1,1), datetime(2025,2,1), datetime(2025,3,1), datetime(2025,4,1), datetime(2025,5,1), datetime(2025,6,1), datetime(2025,7,1), 
+            datetime(2025,8,1), datetime(2025,9,1), datetime(2025,10,1), datetime(2025,11,1), datetime(2025,12,1)))
 ax['lower'].set_xticklabels(('J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'))
-ax['lower'].set_xlim(datetime(2024,1,1), datetime(2025,1,1))
+ax['lower'].set_xlim(datetime(2025,1,1), datetime(2026,1,1))
 ax['lower'].xaxis.set_label_position('top') 
 ax['lower'].xaxis.tick_top()
 ax['lower'].tick_params(width=1, top=True, right=True, bottom=False, direction='in', which='both')
-ax['lower'].set_yticks((0, -1, -2, -3, -4, -5, -6))
-ax['lower'].set_yticklabels(('0', '', '-2', '', '-4', '', '-6'))
+ax['lower'].set_yticks((cumulative_sum.min() - 0.5, cumulative_sum.max() + 0.5, 1))
+# ax['lower'].set_yticklabels(('0', '', '-2', '', '-4', '', '-6'))
 
 sec2 = ax['lower'].secondary_xaxis(location=0)
-sec2.set_xticks([datetime(2024,1,1), datetime(2024,3,1), datetime(2024,4,30), datetime(2024,6,29), datetime(2024,8,28), datetime(2024,10,27), datetime(2024,12,26)], labels=['0', '60', '120', '180', '240', '300', '360'])
+sec2.set_xticks([datetime(2025,1,1), datetime(2025,3,1), datetime(2025,4,30), datetime(2025,6,29), datetime(2025,8,28), datetime(2025,10,27), datetime(2025,12,26)], labels=['0', '60', '120', '180', '240', '300', '360'])
 sec2.tick_params(width=1, top=False, right=False, bottom=True, direction='in', which='both')
 
-ax['upper'].axvspan(xmin=datetime(2024,3,30), xmax=datetime(2024,10,10), color='k', alpha=0.05)
-ax['lower'].axvspan(xmin=datetime(2024,3,30), xmax=datetime(2024,10,10), color='k', alpha=0.05)
+# ax['upper'].axvspan(xmin=datetime(2025,3,30), xmax=datetime(2025,10,10), color='k', alpha=0.05)
+# ax['lower'].axvspan(xmin=datetime(2025,3,30), xmax=datetime(2025,10,10), color='k', alpha=0.05)
 
 ax['lower'].set_ylabel(r'Cumulative Wind Stress (N/m$^2$Days)')
-sec2.set_xlabel(r'Yearday 2024')
+sec2.set_xlabel(r'Yearday 2025')
 
 ax['lower'].text((new_time.max() + timedelta(days=5)), cumulative_sum.min(), cumsum_min + ' ' + r'N/m$^2$Days')
 
-plt.savefig(r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/figures/cui_2024.png')
+plt.savefig(r'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/figures/cui_2025.png')
