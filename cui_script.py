@@ -17,7 +17,7 @@ from metpy.units import units # type: ignore
 from scipy.signal import find_peaks # type: ignore
 
 # Year that you want to examine
-year = 2024
+year = 2025
 
 # Open first dataset up to the 45-day realtime (found at https://www.ndbc.noaa.gov/station_history.php?station=nwpo3)
 ds1 = pd.read_csv(f'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/{year}/nwpo3_{year}.txt', sep='\s+', header=1)
@@ -174,39 +174,43 @@ with open(path, 'w') as f:
 print(f"\nExporting new dataset as '{year}_with_stress.txt'...")
 
 # Parameters
-rolling_window = 10  # Number of days for rolling window
-threshold = 0.001      # Minimum difference threshold for upwelling detection
-positive_duration = 7  # Minimum number of days of positive dominance to end upwelling
+rolling_window = 120  # Adjusted rolling window size for upwelling detection
+threshold = -3.25    # Minimum difference threshold for upwelling detection
+min_upwelling_duration = 30  # Minimum number of consecutive days for upwelling
 
-# Calculate the 90-day rolling sum for both positive and negative stress
+# Calculate the rolling sums for positive and negative stress
 rolling_positive = ds['stress'].where(ds['stress'] > 0).rolling(window=rolling_window, min_periods=1).sum()
 rolling_negative = ds['stress'].where(ds['stress'] < 0).rolling(window=rolling_window, min_periods=1).sum()
 
-# Initialize variables for tracking upwelling season
-upwelling_periods = []  
-upwelling_start = None  # Variable to track the start of the upwelling season
-is_upwelling = False  # Flag for tracking if we are in an upwelling period
+# Initialize variables for tracking upwelling periods
+upwelling_periods = []
+upwelling_start = None
+is_upwelling = False
 
 print(f"\nCalculating upwelling periods...")
-# Iterate over the dataset to find upwelling periods based on the 30-day rolling sums
+# Iterate over the dataset to find upwelling periods
 for date in ds.index:
     cum_neg = rolling_negative.loc[date]
     cum_pos = rolling_positive.loc[date]
-    print(f"{date}: cum_neg={cum_neg}, cum_pos={cum_pos}, diff={cum_neg - cum_pos}")
-    
-    # Check if the cumulative negative stress is greater than positive over the last 90 days
-    if cum_neg - cum_pos > threshold:  # Adjusted condition for upwelling
-        if not is_upwelling:  # If not already in an upwelling season
-            upwelling_start = date  # Mark start of the upwelling season
-            is_upwelling = True  # Set flag to indicate upwelling has started
-    else:
-        if is_upwelling:  # If we were in an upwelling period
-            # Mark the end of the upwelling period
-            upwelling_periods.append((upwelling_start, date))
-            upwelling_start = None  # Reset for the next potential upwelling period
-            is_upwelling = False  # End the upwelling season
+    diff = cum_neg - cum_pos  # Difference between negative and positive stress
+    # print(f"{date}: diff={diff}, threshold={threshold}")
 
-# After the loop, check if we ended in an upwelling season
+    # Check if the cumulative negative stress exceeds the threshold
+    if diff < threshold:
+        if not is_upwelling:
+            upwelling_start = date  # Mark the start of the upwelling period
+            is_upwelling = True
+            # print(f"Upwelling started on {upwelling_start}")
+    else:
+        if is_upwelling:
+            # Check if the upwelling period meets the minimum duration
+            if (date - upwelling_start).days >= min_upwelling_duration:
+                upwelling_periods.append((upwelling_start, date))
+                # print(f"Upwelling period added: {upwelling_start} to {date}")
+            upwelling_start = None
+            is_upwelling = False
+
+# Handle case where the last period is still ongoing
 if is_upwelling and upwelling_start is not None:
     upwelling_periods.append((upwelling_start, ds.index[-1]))
 
@@ -223,29 +227,56 @@ else:
 if upwelling_periods:
     start, end = upwelling_periods[0]  # Example: using the first upwelling period
 
+# Create a mask for values between start and end
 mask = np.logical_and(ds.index >= start, ds.index <= end)
-
-# Apply the mask to the dataset using the index
-new_time = ds.index[mask]
-
-# Create a new windstress variable for the upwelling season
-upwell_stress = stress[mask]
+new_time = ds.index[mask] # Apply the mask to the dataset using the index
+upwell_stress = stress[mask] # Create a new windstress variable for the upwelling season
 
 # Calculate the cumulative wind stress for the upwelling season
 cumulative_sum = np.cumsum(upwell_stress)
 print(f"\nCalculating cumulative wind stress...")
 
-# Calculate the current minimum cumulative value 
-cumsum_min = cumulative_sum.min()
-cumsum_min = round(cumsum_min, 3)
-cumsum_min = str(cumsum_min)
+# Initialize a dictionary to store cumsum_min for each date
+cumsum_min_by_date = {}
+
+# Iterate over each date in the dataset index
+for current_date in ds.index:
+    # Filter cumulative_sum to include only values up to the current date
+    filtered_cumulative_sum = cumulative_sum[(new_time >= start) & (new_time <= current_date)]
+    
+    # Calculate the minimum cumulative value for the filtered range
+    if filtered_cumulative_sum.size > 0:  # Check if the array is not empty
+        cumsum_min = filtered_cumulative_sum.min()
+        cumsum_min = round(cumsum_min, 3)
+        cumsum_min_by_date[current_date] = cumsum_min
+
+    # Convert date to yearday format
+    yearday = current_date.strftime('%j')  # '%j' gives the day of the year as a zero-padded decimal number (001-366)
+
+# Save the cumsum_min values for each date to a text file
+output_path = f'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/{year}/{year}.txt'
+
+with open(output_path, 'w') as file:
+    file.write(f"# Spring Transition Day: {start}\n# Fall Transition Day: {end}\n# Column 1: Yearday\n# Column 2:Northward Wind Stress (N/m^2 Days)\n")
+    for date in ds.index:
+        # Convert date to yearday format
+        yearday = date.strftime('%j')  # '%j' gives the day of the year as a zero-padded decimal number (001-366)
+        
+        # Check if the date is within the start and end range
+        if start <= date <= end:
+            cumsum_min = cumsum_min_by_date.get(date, "NaN")  # Get cumsum_min or default to NaN
+        else:
+            cumsum_min = "NaN"  # Assign NaN for dates outside the range
+        
+        # Write the yearday and cumsum_min to the file
+        file.write(f"{yearday}\t{cumsum_min}\n")
+
+print(f"\nWind stress values saved to '{year}.txt'")
 
 
 # Create timestamp for the figure
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 filename = f'cui_{year}_{timestamp}.png'
-
-print(f"\nCreating figure '{filename}'...")
 
 # Create plot
 fig, ax = plt.subplot_mosaic([['upper', 'upper', 'upper'],
@@ -289,20 +320,20 @@ ax['lower'].set_xlim(datetime(year,1,1), datetime(year+1,1,1))
 ax['lower'].xaxis.set_label_position('top') 
 ax['lower'].xaxis.tick_top()
 ax['lower'].tick_params(width=1, top=True, right=True, bottom=False, direction='in', which='both')
-ax['lower'].set_yticks((cumulative_sum.min() - 0.5, cumulative_sum.max() + 0.5, 1))
-# ax['lower'].set_yticklabels(('0', '', '-2', '', '-4', '', '-6'))
+ax['lower'].set_yticks((0, -1, -2, -3, -4))
+ax['lower'].set_yticklabels((0, -1, -2, -3, -4))
 
 sec2 = ax['lower'].secondary_xaxis(location=0)
 sec2.set_xticks([datetime(year,1,1), datetime(year,3,1), datetime(year,4,30), datetime(year,6,29), datetime(year,8,28), datetime(year,10,27), datetime(year,12,26)], labels=['0', '60', '120', '180', '240', '300', '360'])
 sec2.tick_params(width=1, top=False, right=False, bottom=True, direction='in', which='both')
 
-# ax['upper'].axvspan(xmin=datetime(2025,3,30), xmax=datetime(2025,10,10), color='k', alpha=0.05)
-# ax['lower'].axvspan(xmin=datetime(2025,3,30), xmax=datetime(2025,10,10), color='k', alpha=0.05)
+ax['upper'].axvspan(xmin=start, xmax=end, color='k', alpha=0.05)
+ax['lower'].axvspan(xmin=start, xmax=end, color='k', alpha=0.05)
 
 ax['lower'].set_ylabel(r'Cumulative Wind Stress (N/m$^2$Days)')
 sec2.set_xlabel(f'Yearday {year}')
 
-ax['lower'].text((new_time.max() + timedelta(days=5)), cumulative_sum.min(), cumsum_min + ' ' + r'N/m$^2$Days')
+ax['lower'].text((new_time.max() + timedelta(days=5)), cumulative_sum.min(), str(round(cumulative_sum.min(),3)) + ' ' + r'N/m$^2$Days')
 
 plt.savefig(f'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/figures/{filename}', dpi=300)
 print(f"Figure saved as '{filename}'")
