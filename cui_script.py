@@ -2,7 +2,7 @@
 
 # Created on 2024-10-07 by Jace Marquardt - Oregon State University
 # Wind Stress Functions by Filipe Fernandes (https://github.com/ocefpaf)
-# Last Updated 2025-03-31 by Jace Marquardt
+# Last Updated 2025-04-06 by Jace Marquardt
 
 # Imports 
 import os
@@ -33,7 +33,7 @@ realtime_filepath = f'C:/Users/marqjace/OneDrive - Oregon State University/Deskt
 
 if os.path.exists(realtime_filepath):
     ds2 = pd.read_csv(f'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/{year}/realtime.txt', sep='\s+', header=1)
-    print(f'\nOpening realtime dataset...')
+    print(f'Opening realtime dataset...')
 
     ds2.columns = ds2.columns.str.strip() # Strip whitespace from column names
     ds2.rename(columns={'#yr': 'year', 'mo': 'month', 'dy': 'day', 'hr': 'hour', 'mn': 'minute'}, inplace=True) # Rename columns for clarity
@@ -53,7 +53,7 @@ if os.path.exists(realtime_filepath):
     ds.reset_index(drop=True, inplace=True) # Reset index
     ds.set_index(['time'], inplace=True) # Set time as index
     ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1'], axis=1, inplace=True) # Drop unnecessary columns
-    print(f"\nConcatenating datasets...")
+    print(f"Concatenating datasets...")
 else:
     # Combine and modify datasets
     frames = [ds1]
@@ -62,7 +62,7 @@ else:
     ds.reset_index(drop=True, inplace=True) # Reset index
     ds.set_index(['time'], inplace=True) # Set time as index
     ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1'], axis=1, inplace=True) # Drop unnecessary columns
-    print(f"\nNo realtime dataset found.")
+    print(f"No realtime dataset found.")
 
 # Export dataset to text file (keep header row and index column)
 path = f'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/{year}/{year}_tmp.txt'
@@ -90,13 +90,9 @@ print(f"\nCalculating wind components...")
 # Convert to DataFrame
 ucomp = pd.DataFrame(ucomp, columns=['ucomp'], index=ds.index)
 vcomp = pd.DataFrame(vcomp, columns=['vcomp'], index=ds.index)
-
-# Set new columns in dataset
-ds['ucomp'] = ucomp
-ds['vcomp'] = vcomp
-
-# Assign new variable "vcomp_new"
-vcomp_new = ds['vcomp']
+ds['ucomp'] = ucomp # Add ucomp to dataset
+ds['vcomp'] = vcomp # Add vcomp to dataset
+vcomp_new = ds['vcomp'] # Create new variable for vcomp
 
 
 # Wind Stress Functions adapted from: https://github.com/pyoceans/python-airsea/blob/master/airsea/windstress.py
@@ -148,17 +144,10 @@ def stress(sp, z=10., drag='largepond', rho_air=1.22, Ta=temp):
 vcomp_Nm2 = stress(vcomp_new, drag='largepond', z=10)
 print(f"\nCalculating wind stress...")
 
-# Create new "stress" column in dataset
-ds['stress'] = vcomp_Nm2
-
-# Calculate daily means
-ds = ds.resample('D').mean(numeric_only=True)
-
-# Round values to 3 decimal places
-ds['stress'] = np.round(ds['stress'], 3)
-
-# Define new variable "stress"
-stress = ds['stress']
+ds['stress'] = vcomp_Nm2 # Add wind stress to dataset
+ds = ds.resample('D').mean(numeric_only=True) # Resample to daily mean values
+ds['stress'] = np.round(ds['stress'], 3) # Round to 3 decimal places
+stress = ds['stress'] # Create new variable for stress
 
 # Create new columns for positive and negative wind stress
 ds['positive_stress'] = ds['stress'].apply(lambda x: x if x > 0 else 0)
@@ -188,25 +177,23 @@ upwelling_start = None
 is_upwelling = False
 
 print(f"\nCalculating upwelling periods...")
+
 # Iterate over the dataset to find upwelling periods
 for date in ds.index:
     cum_neg = rolling_negative.loc[date]
     cum_pos = rolling_positive.loc[date]
     diff = cum_neg - cum_pos  # Difference between negative and positive stress
-    # print(f"{date}: diff={diff}, threshold={threshold}")
 
     # Check if the cumulative negative stress exceeds the threshold
     if diff < threshold:
         if not is_upwelling:
             upwelling_start = date  # Mark the start of the upwelling period
             is_upwelling = True
-            # print(f"Upwelling started on {upwelling_start}")
     else:
         if is_upwelling:
             # Check if the upwelling period meets the minimum duration
             if (date - upwelling_start).days >= min_upwelling_duration:
                 upwelling_periods.append((upwelling_start, date))
-                # print(f"Upwelling period added: {upwelling_start} to {date}")
             upwelling_start = None
             is_upwelling = False
 
@@ -257,7 +244,7 @@ for current_date in ds.index:
 output_path = f'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/{year}/{year}.txt'
 
 with open(output_path, 'w') as file:
-    file.write(f"# Spring Transition Day: {start}\n# Fall Transition Day: {end}\n# Column 1: Yearday\n# Column 2:Northward Wind Stress (N/m^2 Days)\n")
+    file.write(f"# Spring Transition Day: {start}\n# Fall Transition Day: {end}\n# Column 1: Yearday\n# Column 2: Northward Wind Stress (N/m^2 Days)\n")
     for date in ds.index:
         # Convert date to yearday format
         yearday = date.strftime('%j')  # '%j' gives the day of the year as a zero-padded decimal number (001-366)
