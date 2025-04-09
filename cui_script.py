@@ -24,7 +24,7 @@ ds1 = pd.read_csv(f'C:/Users/marqjace/OneDrive - Oregon State University/Desktop
 print(f'\nOpening historical dataset...')
 
 ds1.columns = ds1.columns.str.strip() # Strip whitespace from column names
-ds1.rename(columns={'#yr': 'year', 'mo': 'month', 'dy': 'day', 'hr': 'hour', 'mn': 'minute'}, inplace=True) # Rename columns for clarity
+ds1.rename(columns={'#yr': 'year', 'mo': 'month', 'dy': 'day', 'hr': 'hour', 'mn': 'minute', 'degT': 'wdir'}, inplace=True) # Rename columns for clarity
 ds1['time'] = pd.to_datetime(ds1[['year', 'month', 'day', 'hour', 'minute']]) # Convert to datetime
 ds1.replace('MM', np.nan, inplace=True) # Replace "MM" values with NaNs
 
@@ -36,7 +36,7 @@ if os.path.exists(realtime_filepath):
     print(f'Opening realtime dataset...')
 
     ds2.columns = ds2.columns.str.strip() # Strip whitespace from column names
-    ds2.rename(columns={'#yr': 'year', 'mo': 'month', 'dy': 'day', 'hr': 'hour', 'mn': 'minute'}, inplace=True) # Rename columns for clarity
+    ds2.rename(columns={'#yr': 'year', 'mo': 'month', 'dy': 'day', 'hr': 'hour', 'mn': 'minute', 'degT': 'wdir'}, inplace=True) # Rename columns for clarity
     ds2['time'] = pd.to_datetime(ds2[['year', 'month', 'day', 'hour', 'minute']]) # Convert to datetime
     ds2.replace('MM', np.nan, inplace=True) # Replace "MM" values with NaNs
 
@@ -52,7 +52,7 @@ if os.path.exists(realtime_filepath):
     ds.sort_values(by=['time'], inplace=True) # Sort by time
     ds.reset_index(drop=True, inplace=True) # Reset index
     ds.set_index(['time'], inplace=True) # Set time as index
-    ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1'], axis=1, inplace=True) # Drop unnecessary columns
+    ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1', 'nmi', 'deg'], axis=1, inplace=True) # Drop unnecessary columns
     print(f"Concatenating datasets...")
 else:
     # Combine and modify datasets
@@ -61,7 +61,7 @@ else:
     ds.sort_values(by=['time'], inplace=True) # Sort by time
     ds.reset_index(drop=True, inplace=True) # Reset index
     ds.set_index(['time'], inplace=True) # Set time as index
-    ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1'], axis=1, inplace=True) # Drop unnecessary columns
+    ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1', 'nmi', 'deg'], axis=1, inplace=True) # Drop unnecessary columns
     print(f"No realtime dataset found.")
 
 # Export dataset to text file (keep header row and index column)
@@ -73,7 +73,7 @@ with open(path, 'w') as f:
 print(f"\nExporting concatenated dataset as '{year}_tmp.txt'...")
 
 # Create variables for wind direction, wind speed, and air temperature
-wdir = ds['degT'].values
+wdir = ds['wdir'].values
 wspeed = ds['m/s'].values
 temp = ds['degC'].values
 

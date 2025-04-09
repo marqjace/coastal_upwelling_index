@@ -1,1 +1,0 @@
-Minimum Cumulative Wind Stress: 0.252 N/m^2 Days
