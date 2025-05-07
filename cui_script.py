@@ -14,7 +14,8 @@ import pandas as pd # type: ignore
 import metpy # type: ignore
 import metpy.calc # type: ignore
 from metpy.units import units # type: ignore
-from scipy.signal import find_peaks # type: ignore
+# from scipy.signal import find_peaks # type: ignore
+from find_upwell import find_upwell # type: ignore
 
 # Year that you want to examine
 year = 2025
@@ -52,7 +53,10 @@ if os.path.exists(realtime_filepath):
     ds.sort_values(by=['time'], inplace=True) # Sort by time
     ds.reset_index(drop=True, inplace=True) # Reset index
     ds.set_index(['time'], inplace=True) # Set time as index
-    ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1', 'nmi', 'deg'], axis=1, inplace=True) # Drop unnecessary columns
+    if year == 2022 or 2023 or 2024:
+        ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1'], axis=1, inplace=True) # Drop unnecessary columns
+    else:
+        ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1', 'nmi', 'deg'], axis=1, inplace=True) # Drop unnecessary columns
     print(f"Concatenating datasets...")
 else:
     # Combine and modify datasets
@@ -61,7 +65,10 @@ else:
     ds.sort_values(by=['time'], inplace=True) # Sort by time
     ds.reset_index(drop=True, inplace=True) # Reset index
     ds.set_index(['time'], inplace=True) # Set time as index
-    ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1', 'nmi', 'deg'], axis=1, inplace=True) # Drop unnecessary columns
+    if year == 2022 or 2023 or 2024:
+        ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1'], axis=1, inplace=True) # Drop unnecessary columns
+    else:
+        ds.drop(['year', 'month', 'day', 'hour', 'minute', 'sec', 'sec.1', 'hPa', 'degC.1', 'degC.2', 'ft', 'degT.1', 'm', 'm/s.1', 'nmi', 'deg'], axis=1, inplace=True) # Drop unnecessary columns
     print(f"No realtime dataset found.")
 
 # Export dataset to text file (keep header row and index column)
@@ -155,92 +162,34 @@ ds['negative_stress'] = ds['stress'].apply(lambda x: x if x < 0 else 0)
 
 # Specify path for export. Creates new file with combined dataset.
 path = f'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/{year}/{year}_with_stress.txt'
-
-# Export dataset to text file (keep header row and index column)
 with open(path, 'w') as f:
     ds_string = ds.to_string()
     f.write(ds_string)
 print(f"\nExporting new dataset as '{year}_with_stress.txt'...")
 
-# Parameters
-rolling_window = 120  # Adjusted rolling window size for upwelling detection
-threshold = -3.25    # Minimum difference threshold for upwelling detection
-min_upwelling_duration = 30  # Minimum number of consecutive days for upwelling
+# Adjust threshold if necessary
+upwelling_period = find_upwell(ds)  # Lowered threshold for better detection
 
-# Calculate the rolling sums for positive and negative stress
-rolling_positive = ds['stress'].where(ds['stress'] > 0).rolling(window=rolling_window, min_periods=1).sum()
-rolling_negative = ds['stress'].where(ds['stress'] < 0).rolling(window=rolling_window, min_periods=1).sum()
+start = upwelling_period.index[0]  # Start date of upwelling period
+end = upwelling_period.index[-1]  # End date of upwelling period
 
-# Initialize variables for tracking upwelling periods
-upwelling_periods = []
-upwelling_start = None
-is_upwelling = False
-
-print(f"\nCalculating upwelling periods...")
-
-# Iterate over the dataset to find upwelling periods
-for date in ds.index:
-    cum_neg = rolling_negative.loc[date]
-    cum_pos = rolling_positive.loc[date]
-    diff = cum_neg - cum_pos  # Difference between negative and positive stress
-
-    # Check if the cumulative negative stress exceeds the threshold
-    if diff < threshold:
-        if not is_upwelling:
-            upwelling_start = date  # Mark the start of the upwelling period
-            is_upwelling = True
-    else:
-        if is_upwelling:
-            # Check if the upwelling period meets the minimum duration
-            if (date - upwelling_start).days >= min_upwelling_duration:
-                upwelling_periods.append((upwelling_start, date))
-            upwelling_start = None
-            is_upwelling = False
-
-# Handle case where the last period is still ongoing
-if is_upwelling and upwelling_start is not None:
-    upwelling_periods.append((upwelling_start, ds.index[-1]))
-
-# Print the identified upwelling periods
-if upwelling_periods:
-    for i, (start, end) in enumerate(upwelling_periods, 1):
-        print(f"Upwelling season {i}: From {start.date()} to {end.date()}")
-else:
-    print("No upwelling season detected.")
-    # Set default values for start and end if no upwelling periods are detected
-    start, end = ds.index[0], ds.index[-1]
-
-# Define start and end for the mask
-if upwelling_periods:
-    start, end = upwelling_periods[0]  # Example: using the first upwelling period
-
-# Create a mask for values between start and end
-mask = np.logical_and(ds.index >= start, ds.index <= end)
-new_time = ds.index[mask] # Apply the mask to the dataset using the index
-upwell_stress = stress[mask] # Create a new windstress variable for the upwelling season
+upwell_stress = upwelling_period['stress'].values
 
 # Calculate the cumulative wind stress for the upwelling season
 cumulative_sum = np.cumsum(upwell_stress)
 print(f"\nCalculating cumulative wind stress...")
 
-# Initialize a dictionary to store cumsum_min for each date
-cumsum_min_by_date = {}
+# Initialize a dictionary to store cumulative sum for each date
+cumsum_by_date = {}
 
-# Iterate over each date in the dataset index
-for current_date in ds.index:
-    # Filter cumulative_sum to include only values up to the current date
-    filtered_cumulative_sum = cumulative_sum[(new_time >= start) & (new_time <= current_date)]
-    
-    # Calculate the minimum cumulative value for the filtered range
-    if filtered_cumulative_sum.size > 0:  # Check if the array is not empty
-        cumsum_min = filtered_cumulative_sum.min()
-        cumsum_min = round(cumsum_min, 3)
-        cumsum_min_by_date[current_date] = cumsum_min
+# Iterate over each date in the upwelling period
+for i, current_date in enumerate(upwelling_period.index):
+    # Calculate the cumulative sum up to the current date
+    cumsum_value = np.cumsum(upwell_stress[:i + 1])[-1]  # Cumulative sum up to the current date
+    cumsum_value = round(cumsum_value, 3)  # Round to 3 decimal places
+    cumsum_by_date[current_date] = cumsum_value
 
-    # Convert date to yearday format
-    yearday = current_date.strftime('%j')  # '%j' gives the day of the year as a zero-padded decimal number (001-366)
-
-# Save the cumsum_min values for each date to a text file
+# Save the cumulative sum values for each date to a text file
 output_path = f'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/{year}/{year}.txt'
 
 with open(output_path, 'w') as file:
@@ -251,12 +200,12 @@ with open(output_path, 'w') as file:
         
         # Check if the date is within the start and end range
         if start <= date <= end:
-            cumsum_min = cumsum_min_by_date.get(date, "NaN")  # Get cumsum_min or default to NaN
+            cumsum_value = cumsum_by_date.get(date, "NaN")  # Get cumulative sum or default to NaN
         else:
-            cumsum_min = "NaN"  # Assign NaN for dates outside the range
+            cumsum_value = "NaN"  # Assign NaN for dates outside the range
         
-        # Write the yearday and cumsum_min to the file
-        file.write(f"{yearday}\t{cumsum_min}\n")
+        # Write the yearday and cumulative sum to the file
+        file.write(f"{yearday}\t{cumsum_value}\n")
 
 print(f"\nWind stress values saved to '{year}.txt'")
 
@@ -298,7 +247,7 @@ ax['upper'].set_ylim(-0.3, 0.9)
 ax['upper'].set_ylabel(r'Wind Stress (N/m$^2$)')
 ax['upper'].set_title(f'{year}')
 
-ax['lower'].plot(new_time, cumulative_sum, c='b', alpha=0.75)
+ax['lower'].plot(upwelling_period.index, cumulative_sum, c='b', alpha=0.75)
 ax['lower'].set_xticklabels('')
 ax['lower'].set_xticks((datetime(year,1,1), datetime(year,2,1), datetime(year,3,1), datetime(year,4,1), datetime(year,5,1), datetime(year,6,1), datetime(year,7,1), 
             datetime(year,8,1), datetime(year,9,1), datetime(year,10,1), datetime(year,11,1), datetime(year,12,1)))
@@ -320,7 +269,7 @@ ax['lower'].axvspan(xmin=start, xmax=end, color='k', alpha=0.05)
 ax['lower'].set_ylabel(r'Cumulative Wind Stress (N/m$^2$Days)')
 sec2.set_xlabel(f'Yearday {year}')
 
-ax['lower'].text((new_time.max() + timedelta(days=5)), cumulative_sum.min(), str(round(cumulative_sum.min(),3)) + ' ' + r'N/m$^2$Days')
+ax['lower'].text((upwelling_period.index.max() + timedelta(days=5)), cumulative_sum.min(), str(round(cumulative_sum.min(),3)) + ' ' + r'N/m$^2$Days')
 
 plt.savefig(f'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/figures/{filename}', dpi=300)
 print(f"Figure saved as '{filename}'")
