@@ -17,7 +17,7 @@ from metpy.units import units # type: ignore
 from find_upwell import find_upwell # type: ignore
 
 # Year that you want to examine
-year = 2023
+year = 2025
 
 # Open first dataset up to the 45-day realtime (found at https://www.ndbc.noaa.gov/station_history.php?station=nwpo3)
 ds1 = pd.read_csv(f'C:/Users/marqjace/OneDrive - Oregon State University/Desktop/Python/coastal_upwelling_index/{year}/nwpo3_{year}.txt', sep='\s+', header=1)
